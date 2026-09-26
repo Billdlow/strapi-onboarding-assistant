@@ -1,0 +1,39 @@
+
+no-entity-service [error]
+  Why: entityService is deprecated — it was replaced by the Document Service API.
+  Fix: Replace `strapi.entityService.*` calls with the equivalent `strapi.documents(uid).*` Document Service call.
+
+  target/strapi/packages/plugins/i18n/server/src/controllers/validate-locale-creation.ts:44
+  → const entity = await strapi.entityService.findMany(modelDef.uid, {
+
+no-explicit-any [warning]
+  Why: Using `any` disables TypeScript's type safety — prefer `unknown` or a proper type.
+  Fix: Replace `: any` with a specific type or `unknown`. For gradual migration use `// eslint-disable-next-line @typescript-eslint/no-explicit-any` with a TODO comment.
+
+  target/strapi/packages/plugins/i18n/server/src/controllers/validate-locale-creation.ts:18
+  → const body = ctx.request.body as any;
+  target/strapi/packages/plugins/i18n/server/src/controllers/validate-locale-creation.ts:46
+  → } as any); // TODO: add this type to entityService
+  target/strapi/packages/core/core/src/Strapi.ts:54
+  → app: any;
+  target/strapi/packages/core/core/src/Strapi.ts:544
+  → (global as any).GLOBAL_AGENT.HTTP_PROXY = httpProxy;
+  target/strapi/packages/core/core/src/Strapi.ts:549
+  → (global as any).GLOBAL_AGENT.HTTPS_PROXY = httpsProxy;
+
+no-global-strapi [error]
+  Why: Use of global.strapi bypasses dependency injection and breaks modularity.
+  Fix: Receive `strapi` as a parameter via the factory pattern (e.g. `createService(strapi)`) instead of reading `global.strapi`.
+
+  target/strapi/packages/plugins/documentation/server/src/utils.ts:7
+  → { strapi }: { strapi: Core.Strapi } = { strapi: global.strapi }
+
+conventional-commit [error]
+  Why: Commit messages must follow Conventional Commits to keep the changelog clean.
+  Fix: Use format `type(scope): description` where type is one of: chore, ci, docs, enhancement, feat, fix, release, revert, security, test, future.
+
+  (commit message)
+  → added new feature
+  Commit message does not follow the `type(scope): description` format.
+
+Found: 3 errors, 5 warnings

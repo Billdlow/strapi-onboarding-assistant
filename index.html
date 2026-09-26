@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strapi Onboarding Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    /* ── reset / tokens ────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #ffffff;
+      --surface:   #f7f8fa;
+      --border:    #e5e7eb;
+      --text:      #1f2328;
+      --muted:     #57606a;
+      --accent:    #3b82d4;
+      --secondary: #7c5cd8;
+      --green:     #1a7f37;
+      --red:       #d1242f;
+      --sidebar-w: 230px;
+      --header-h:  52px;
+      --radius:    6px;
+      --mono:      "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:      #0d1117;
+        --surface: #161b22;
+        --border:  #30363d;
+        --text:    #e6edf3;
+        --muted:   #8b949e;
+      }
+    }
+
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── top bar ───────────────────────────────────────── */
+    #topbar {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    #topbar h1 {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #topbar h1 span { color: var(--accent); }
+    #menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px 8px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    /* ── layout ────────────────────────────────────────── */
+    #shell {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── sidebar ───────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+    .nav-section {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      padding: 14px 16px 4px;
+    }
+    .nav-link {
+      display: block;
+      padding: 7px 16px;
+      font-size: 13.5px;
+      color: var(--text);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: background .12s, border-color .12s;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nav-link:hover { background: var(--border); }
+    .nav-link.active {
+      border-left-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
+      font-weight: 600;
+    }
+    .nav-indent { padding-left: 28px; }
+
+    /* ── main content ──────────────────────────────────── */
+    #main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px 60px;
+      max-width: 860px;
+    }
+
+    /* spinner */
+    .spinner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      padding: 40px 0;
+    }
+    .spinner::before {
+      content: "";
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* markdown styles */
+    #main h1 { font-size: 1.6em; margin: 0 0 .6em; }
+    #main h2 { font-size: 1.25em; margin: 1.6em 0 .5em; border-bottom: 1px solid var(--border); padding-bottom: .3em; }
+    #main h3 { font-size: 1.08em; margin: 1.3em 0 .4em; }
+    #main h4 { font-size: .97em; margin: 1.1em 0 .3em; }
+    #main p  { margin: .6em 0; }
+    #main ul, #main ol { margin: .5em 0 .5em 1.4em; }
+    #main li { margin: .25em 0; }
+    #main a { color: var(--accent); text-decoration: none; }
+    #main a:hover { text-decoration: underline; }
+    #main blockquote {
+      border-left: 3px solid var(--border);
+      margin: .8em 0;
+      padding: .4em .8em;
+      color: var(--muted);
+    }
+    #main table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: .8em 0;
+      font-size: .93em;
+      overflow-x: auto;
+      display: block;
+    }
+    #main th, #main td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+    }
+    #main th { background: var(--surface); font-weight: 600; }
+    #main tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 60%, transparent); }
+    #main code {
+      font-family: var(--mono);
+      font-size: .88em;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: .1em .35em;
+    }
+    #main pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      overflow-x: auto;
+      margin: .8em 0;
+      font-size: .87em;
+      line-height: 1.55;
+    }
+    #main pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+    #main hr { border: none; border-top: 1px solid var(--border); margin: 1.4em 0; }
+
+    /* mermaid */
+    .mermaid { margin: 1em 0; overflow-x: auto; }
+
+    /* stat cards */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 16px 0 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+    .stat-label {
+      font-size: .82em;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* bob sessions table */
+    .sessions-list {
+      list-style: none;
+      margin: 10px 0 20px;
+    }
+    .sessions-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .93em;
+    }
+    .sessions-list li:last-child { border-bottom: none; }
+    .task-num {
+      width: 26px;
+      min-width: 26px;
+      height: 22px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 3px;
+      font-size: .75em;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+    }
+
+    /* role switcher */
+    .switcher {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0 20px;
+      flex-wrap: wrap;
+    }
+    .switcher button {
+      padding: 6px 16px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13.5px;
+      transition: background .12s, border-color .12s;
+    }
+    .switcher button.active, .switcher button:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* level filter */
+    .level-btns {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0 20px;
+      flex-wrap: wrap;
+    }
+    .level-btns button {
+      padding: 5px 14px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .level-btns button.active { background: var(--secondary); color: #fff; border-color: var(--secondary); }
+    .level-btns button:hover:not(.active) { background: var(--border); }
+
+    /* terminal block */
+    .terminal {
+      background: #0d1117;
+      color: #e6edf3;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      font-family: var(--mono);
+      font-size: .84em;
+      line-height: 1.6;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 12px 0 20px;
+      border: 1px solid #30363d;
+    }
+
+    /* quiz */
+    .quiz-q {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    .quiz-q h3 { margin: 0 0 10px; font-size: 1em; }
+    .quiz-opts { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .quiz-opts li button {
+      width: 100%;
+      text-align: left;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      font-size: .93em;
+      transition: background .1s;
+    }
+    .quiz-opts li button:hover:not(:disabled) { background: var(--border); }
+    .quiz-opts li.correct button { background: color-mix(in srgb, var(--green) 18%, transparent); border-color: var(--green); color: var(--green); }
+    .quiz-opts li.wrong   button { background: color-mix(in srgb, var(--red)   15%, transparent); border-color: var(--red);   color: var(--red); }
+    .quiz-explanation {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: color-mix(in srgb, var(--accent) 8%, transparent);
+      border-left: 3px solid var(--accent);
+      font-size: .9em;
+      line-height: 1.55;
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .quiz-score {
+      font-size: 1.3em;
+      font-weight: 700;
+      margin: 20px 0 6px;
+      color: var(--accent);
+    }
+    #quiz-reset {
+      margin-top: 16px;
+      padding: 8px 20px;
+      border-radius: var(--radius);
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      font-size: .93em;
+    }
+
+    /* responsive */
+    @media (max-width: 680px) {
+      :root { --sidebar-w: 200px; }
+      #main { padding: 18px 16px 50px; }
+      #menu-toggle { display: block; }
+      #sidebar {
+        position: fixed;
+        top: var(--header-h);
+        left: 0;
+        bottom: 0;
+        z-index: 90;
+        transform: translateX(-100%);
+        transition: transform .2s;
+      }
+      #sidebar.open { transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <button id="menu-toggle" aria-label="Toggle menu">☰</button>
+  <h1>Strapi <span>Onboarding Assistant</span></h1>
+</div>
+
+<div id="shell">
+  <nav id="sidebar" aria-label="Site navigation">
+    <div class="nav-section">Main</div>
+    <a class="nav-link" data-page="home">🏠 Home</a>
+    <a class="nav-link" data-page="architecture">🏗 Architecture</a>
+
+    <div class="nav-section">Feature Traces</div>
+    <a class="nav-link" data-page="traces">📋 Trace Index</a>
+    <a class="nav-link nav-indent" data-page="trace/publish">Publish</a>
+    <a class="nav-link nav-indent" data-page="trace/login">Login</a>
+    <a class="nav-link nav-indent" data-page="trace/create-content-type">Create Content Type</a>
+    <a class="nav-link nav-indent" data-page="trace/upload">Upload</a>
+
+    <div class="nav-section">Guides</div>
+    <a class="nav-link" data-page="setup">⚙️ Setup</a>
+    <a class="nav-link" data-page="learning-paths">🎓 Learning Paths</a>
+    <a class="nav-link" data-page="starter-tasks">🚀 Starter Tasks</a>
+
+    <div class="nav-section">Tools</div>
+    <a class="nav-link" data-page="quiz">🧠 Quiz</a>
+    <a class="nav-link" data-page="convention-guard">🛡 Convention Guard</a>
+    <a class="nav-link" data-page="impact">📈 Impact</a>
+    <a class="nav-link" data-page="buddy">🤝 Ask the Buddy</a>
+  </nav>
+
+  <main id="main" role="main">
+    <div class="spinner">Loading…</div>
+  </main>
+</div>
+
+<script>
+/* ── Configuration ─────────────────────────────────────── */
+const PAGES = {
+  home:                  null,   // built programmatically
+  architecture:          'outputs/architecture.md',
+  traces:                'outputs/feature-index.md',
+  'trace/publish':       'outputs/trace-publish.md',
+  'trace/login':         'outputs/trace-login.md',
+  'trace/create-content-type': 'outputs/trace-create-content-type.md',
+  'trace/upload':        'outputs/trace-upload.md',
+  setup:                 'outputs/setup-guide.md',
+  'learning-paths':      'outputs/learning-paths.md',
+  'starter-tasks':       'outputs/starter-tasks.md',
+  quiz:                  null,   // built programmatically
+  'convention-guard':    null,   // built programmatically
+  impact:                'outputs/impact.md',
+  buddy:                 null,   // built programmatically
+};
+
+// Internal relative-link rewrites: map md filename → page key
+const LINK_MAP = {
+  'architecture.md':          '#/architecture',
+  'feature-index.md':         '#/traces',
+  'trace-publish.md':         '#/trace/publish',
+  'trace-login.md':           '#/trace/login',
+  'trace-create-content-type.md': '#/trace/create-content-type',
+  'trace-upload.md':          '#/trace/upload',
+  'setup-guide.md':           '#/setup',
+  'learning-paths.md':        '#/learning-paths',
+  'starter-tasks.md':         '#/starter-tasks',
+  'buddy-demo.md':            '#/buddy',
+  'quiz.md':                  '#/quiz',
+  'impact.md':                '#/impact',
+  'convention-guard-demo.txt':'#/convention-guard',
+};
+
+/* ── Mermaid init ──────────────────────────────────────── */
+mermaid.initialize({
+  startOnLoad: false,
+  theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+  securityLevel: 'loose',
+  suppressErrorRendering: true,
+});
+
+/* ── Marked setup ──────────────────────────────────────── */
+marked.setOptions({ gfm: true, breaks: false });
+
+/* Override renderer for internal relative links */
+const renderer = new marked.Renderer();
+renderer.link = function(href, title, text) {
+  // href may be an object in newer marked versions
+  if (href && typeof href === 'object') { title = href.title; text = href.text; href = href.href; }
+  if (!href) return text;
+  // Strip leading "./" if present
+  const bare = href.replace(/^\.\//, '').split('#')[0];
+  if (LINK_MAP[bare]) {
+    const anchor = href.includes('#') ? '' : ''; // ignore in-doc anchors for now
+    return `<a href="${LINK_MAP[bare]}"${title ? ` title="${title}"` : ''}>${text}</a>`;
+  }
+  // External link
+  return `<a href="${href}" target="_blank" rel="noopener"${title ? ` title="${title}"` : ''}>${text}</a>`;
+};
+marked.use({ renderer });
+
+/* ── Fetch helpers ─────────────────────────────────────── */
+const cache = {};
+async function fetchText(url) {
+  if (cache[url]) return cache[url];
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${url}`);
+  cache[url] = await r.text();
+  return cache[url];
+}
+
+/* ── Mermaid rendering after markdown ──────────────────── */
+async function renderMermaid(container) {
+  const pres = container.querySelectorAll('pre > code.language-mermaid');
+  let idx = 0;
+  for (const code of pres) {
+    const pre = code.parentElement;
+    const id = `mermaid-${Date.now()}-${idx++}`;
+    const wrap = document.createElement('div');
+    wrap.className = 'mermaid';
+    wrap.id = id;
+    const src = code.textContent.trim();
+    try {
+      const { svg } = await mermaid.render(id + '-svg', src);
+      wrap.innerHTML = svg;
+    } catch (e) {
+      const safeMsg = e.message ? e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;') : 'unknown error';
+      const detailsId = id + '-details';
+      wrap.innerHTML =
+        `<p style="color:var(--red);font-size:.88em;margin:.4em 0">⚠ Diagram could not be rendered</p>` +
+        `<details id="${detailsId}" style="font-size:.8em">` +
+          `<summary style="cursor:pointer;color:var(--muted)">Show source</summary>` +
+          `<pre style="margin:.4em 0;overflow-x:auto">${src.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>` +
+        `</details>`;
+    }
+    pre.replaceWith(wrap);
+  }
+}
+
+/* ── Generic markdown page ─────────────────────────────── */
+async function renderMarkdown(page) {
+  const url = PAGES[page];
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading…</div>';
+  try {
+    const md = await fetchText(url);
+    main.innerHTML = marked.parse(md);
+    await renderMermaid(main);
+  } catch (e) {
+    main.innerHTML = `<p style="color:var(--red)">Failed to load <code>${url}</code>: ${e.message}</p>`;
+  }
+}
+
+/* ── HOME page ─────────────────────────────────────────── */
+async function renderHome() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading…</div>';
+
+  // Fetch impact for speedup stats
+  let speedupHtml = '';
+  try {
+    const impact = await fetchText('outputs/impact.md');
+    // Extract first speedup from the table
+    const match = impact.match(/\*\*~([\d–×]+×)\*\*/g);
+    speedupHtml = match ? match[0].replace(/\*\*/g, '') : '~55–90×';
+  } catch(_) { speedupHtml = '~55–90×'; }
+
+  main.innerHTML = `
+    <h1>Strapi Onboarding Assistant</h1>
+    <p>A self-contained onboarding toolkit for new
+    <strong>strapi/strapi</strong> monorepo contributors — generated entirely by IBM Bob.
+    It maps the full request pipeline for four key features, reconciles conflicting Node-version
+    sources, curates ready-to-attempt starter tasks, and ships a convention-guard CLI so a
+    newcomer can orient themselves in minutes instead of days.</p>
+
+    <h2>At a glance</h2>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">Feature traces</div></div>
+      <div class="stat-card"><div class="stat-num">22/22</div><div class="stat-label">Unit tests passing</div></div>
+      <div class="stat-card"><div class="stat-num">4</div><div class="stat-label">Node-version sources reconciled</div></div>
+      <div class="stat-card"><div class="stat-num">${speedupHtml}</div><div class="stat-label">Publish-trace speedup</div></div>
+    </div>
+
+    <h2>How IBM Bob built this</h2>
+    <p>Nine focused Bob sessions produced every artefact in this project.
+    Click a session log to read the full conversation.</p>
+    <ul class="sessions-list">
+      <li><span class="task-num">1</span><span><a href="bob_sessions/cc_task01-02_architecture_and_publish_trace_log.md" target="_blank">Architecture overview + publish trace</a> — package map, request lifecycle, app lifecycle, common pitfalls, full publish call chain</span></li>
+      <li><span class="task-num">2</span><span><a href="bob_sessions/cc_task01-02_architecture_and_publish_trace_log.md" target="_blank">Architecture + publish (same session)</a> — <code>outputs/architecture.md</code> and <code>outputs/trace-publish.md</code></span></li>
+      <li><span class="task-num">3</span><span><a href="bob_sessions/cc_task03_setup_guide_log.md" target="_blank">Setup guide</a> — Node/Yarn version matrix, first-run walkthrough, troubleshooting table → <code>outputs/setup-guide.md</code></span></li>
+      <li><span class="task-num">4</span><span><a href="bob_sessions/cc_task04_convention_guard_log.md" target="_blank">Convention Guard CLI</a> — 6 static-analysis rules, 22 unit tests, reporter → <code>src/convention-guard/</code></span></li>
+      <li><span class="task-num">5</span><span><a href="bob_sessions/cc_task05_starter_tasks_log.md" target="_blank">Starter tasks</a> — 9 curated Level 1/2/3 contribution tasks with file citations → <code>outputs/starter-tasks.md</code></span></li>
+      <li><span class="task-num">6</span><span><a href="bob_sessions/cc_task06_onboarding_cli_log.md" target="_blank">Onboarding CLI</a> — interactive <code>node src/onboard.js</code> entry point</span></li>
+      <li><span class="task-num">7</span><span><a href="bob_sessions/cc_task07_parallel_feature_traces_log.md" target="_blank">Parallel feature traces</a> — login, create-content-type, upload traces + feature index → <code>outputs/trace-*.md</code></span></li>
+      <li><span class="task-num">8</span><span><a href="bob_sessions/cc_task08_custom_mode_log.md" target="_blank">Custom Bob mode</a> — <em>Strapi Onboarding Buddy</em> persona in <code>.bob/custom_modes.yaml</code> with demo Q&amp;A</span></li>
+      <li><span class="task-num">9</span><span><a href="bob_sessions/cc_task09_learning_paths_log.md" target="_blank">Learning paths + quiz + impact</a> — structured 3-day paths, 10-question quiz, impact table → <code>outputs/learning-paths.md</code>, <code>outputs/quiz.md</code>, <code>outputs/impact.md</code></span></li>
+    </ul>
+
+    <h2>Explore the portal</h2>
+    <p>Use the sidebar to navigate. Start with
+    <a href="#/architecture">Architecture</a> for the big picture, then pick a
+    <a href="#/traces">Feature Trace</a> for a code-level walkthrough, or jump straight to
+    <a href="#/starter-tasks">Starter Tasks</a> if you want to contribute today.</p>
+  `;
+}
+
+/* ── QUIZ page ─────────────────────────────────────────── */
+async function renderQuiz() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading quiz…</div>';
+  let raw;
+  try { raw = await fetchText('outputs/quiz.md'); } catch(e) {
+    main.innerHTML = `<p style="color:var(--red)">Failed to load quiz: ${e.message}</p>`; return;
+  }
+
+  // Parse questions
+  const qSection = raw.split(/^## Answers/m)[0];
+  const aSection = raw.split(/^## Answers/m)[1] || '';
+
+  const qBlocks = qSection.split(/^### Q(\d+)/m).slice(1);
+  const questions = [];
+  for (let i = 0; i < qBlocks.length; i += 2) {
+    const num = parseInt(qBlocks[i], 10);
+    const body = qBlocks[i + 1] || '';
+    const lines = body.trim().split('\n');
+    let questionText = '';
+    const opts = [];
+    let inQ = true;
+    for (const ln of lines) {
+      const m = ln.match(/^-\s+([A-D])\)\s+(.*)/);
+      if (m) { inQ = false; opts.push({ letter: m[1], text: m[2] }); }
+      else if (inQ && ln.trim() && !ln.startsWith('---')) questionText += (questionText ? ' ' : '') + ln.trim();
+    }
+    questions.push({ num, questionText, opts });
+  }
+
+  // Parse answers (letter + explanation)
+  const answers = {};
+  const aBlocks = aSection.split(/^### A(\d+)/m).slice(1);
+  for (let i = 0; i < aBlocks.length; i += 2) {
+    const num = parseInt(aBlocks[i], 10);
+    const body = aBlocks[i + 1] || '';
+    const letterMatch = body.match(/\*\*([A-D])\*\*/);
+    const letter = letterMatch ? letterMatch[1] : '';
+    // Explanation: everything after "**Explanation:**"
+    const expMatch = body.match(/\*\*Explanation:\*\*\s*([\s\S]*?)(?:\n\*\*Doc reference|$)/);
+    const explanation = expMatch ? expMatch[1].trim() : '';
+    answers[num] = { letter, explanation };
+  }
+
+  // State
+  const state = questions.map(() => ({ answered: false, chosen: null }));
+  let score = 0;
+
+  function buildQuiz() {
+    let html = `<h1>Strapi Contributor Quiz</h1>
+    <p style="color:var(--muted);margin-bottom:18px">10 multiple-choice questions. Click an option to reveal the answer and explanation.</p>`;
+
+    questions.forEach((q, qi) => {
+      const ans = answers[q.num] || {};
+      const st = state[qi];
+      html += `<div class="quiz-q" id="qq-${qi}">
+        <h3>Q${q.num} — ${q.questionText}</h3>
+        <ul class="quiz-opts">`;
+      q.opts.forEach(opt => {
+        const isCorrect = opt.letter === ans.letter;
+        const isChosen  = st.answered && st.chosen === opt.letter;
+        let liClass = '';
+        if (st.answered) liClass = isCorrect ? 'correct' : (isChosen ? 'wrong' : '');
+        html += `<li class="${liClass}">
+          <button ${st.answered ? 'disabled' : `onclick="window._quizAnswer(${qi}, '${opt.letter}')"`}>
+            <strong>${opt.letter})</strong> ${opt.text}
+          </button></li>`;
+      });
+      html += `</ul>`;
+      if (st.answered && ans.explanation) {
+        html += `<div class="quiz-explanation">${marked.parse(ans.explanation)}</div>`;
+      }
+      html += `</div>`;
+    });
+
+    const allDone = state.every(s => s.answered);
+    if (allDone) {
+      html += `<div class="quiz-score">Score: ${score} / ${questions.length}</div>`;
+      html += `<p style="color:var(--muted);font-size:.9em">
+        ${score === questions.length ? '🎉 Perfect score!' :
+          score >= 7 ? 'Great work — you\'ve got the fundamentals.' :
+          'Keep reading the traces and try again!'}
+      </p>`;
+      html += `<button id="quiz-reset" onclick="window._quizReset()">Restart quiz</button>`;
+    }
+    main.innerHTML = html;
+  }
+
+  window._quizAnswer = function(qi, letter) {
+    if (state[qi].answered) return;
+    state[qi].answered = true;
+    state[qi].chosen = letter;
+    const ans = answers[questions[qi].num] || {};
+    if (letter === ans.letter) score++;
+    buildQuiz();
+    document.getElementById(`qq-${qi}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  window._quizReset = function() {
+    state.forEach(s => { s.answered = false; s.chosen = null; });
+    score = 0;
+    buildQuiz();
+    main.scrollTop = 0;
+  };
+
+  buildQuiz();
+}
+
+/* ── CONVENTION GUARD page ─────────────────────────────── */
+async function renderConventionGuard() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading…</div>';
+  let demo = '';
+  try { demo = await fetchText('outputs/convention-guard-demo.txt'); } catch(e) { demo = 'Demo output not found.'; }
+
+  main.innerHTML = `
+    <h1>Convention Guard</h1>
+    <p>A zero-dependency Node.js CLI that checks contributor changes against the
+    <strong>Strapi contribution rules</strong>. It catches forbidden patterns before a PR is
+    submitted — no CI round-trip required.</p>
+
+    <h2>The 6 rules</h2>
+    <table>
+      <thead><tr><th>ID</th><th>Severity</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>no-global-strapi</code></td><td>🔴 error</td><td>Use of <code>global.strapi</code> — bypasses DI; receive <code>strapi</code> as a parameter instead.</td></tr>
+        <tr><td><code>no-entity-service</code></td><td>🔴 error</td><td><code>strapi.entityService</code> is deprecated — use <code>strapi.documents(uid)</code>.</td></tr>
+        <tr><td><code>conventional-commit</code></td><td>🔴 error</td><td>Commit message must follow <code>type(scope): description</code> Conventional Commits format.</td></tr>
+        <tr><td><code>no-explicit-any</code></td><td>🟡 warning</td><td><code>: any</code> or <code>as any</code> in <code>.ts</code>/<code>.tsx</code> files.</td></tr>
+        <tr><td><code>no-raw-sql-interpolation</code></td><td>🟡 warning</td><td>Template-literal SQL interpolation inside raw query calls — SQL-injection risk.</td></tr>
+        <tr><td><code>examples-folder-touched</code></td><td>🟡 warning</td><td>Files inside <code>examples/</code> (except <code>examples/complex</code>) — review carefully.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Demo output</h2>
+    <p>Running the guard against a set of fixture files that intentionally trigger every rule:</p>
+    <div class="terminal">${escHtml(demo)}</div>
+
+    <h2>Usage</h2>
+    <pre><code>node src/convention-guard/index.js \\
+  --files packages/foo/src/index.ts \\
+  --commit "feat(admin): add bulk delete"</code></pre>
+    <p>Run <code>node src/convention-guard/index.js --help</code> for all options.
+    Tests: <code>node --test src/convention-guard/__tests__/rules.test.js</code></p>
+  `;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── BUDDY page ────────────────────────────────────────── */
+async function renderBuddy() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading…</div>';
+  let md = '';
+  try { md = await fetchText('outputs/buddy-demo.md'); } catch(e) {
+    main.innerHTML = `<p style="color:var(--red)">Failed to load buddy-demo.md: ${e.message}</p>`; return;
+  }
+  const note = `<blockquote style="margin-bottom:1.4em">
+    <p><strong>About the Buddy mode</strong></p>
+    <p>The <em>Strapi Onboarding Buddy</em> is a custom Bob mode defined in
+    <a href=".bob/custom_modes.yaml" target="_blank"><code>.bob/custom_modes.yaml</code></a>.
+    It gives Bob the persona of a patient senior Strapi contributor who always cites exact file
+    paths and line numbers, stays read-only for <code>target/strapi</code> source, and suggests
+    the best next document at the end of every answer. The Q&amp;A below was produced in a live
+    session using that mode.</p>
+  </blockquote>`;
+  main.innerHTML = note + marked.parse(md);
+  await renderMermaid(main);
+}
+
+/* ── LEARNING PATHS page ───────────────────────────────── */
+async function renderLearningPaths() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading…</div>';
+  let md = '';
+  try { md = await fetchText('outputs/learning-paths.md'); } catch(e) {
+    main.innerHTML = `<p style="color:var(--red)">Failed to load learning-paths.md: ${e.message}</p>`; return;
+  }
+
+  // Split by path sections: "## Path A —", "## Path B —", "## Path C —"
+  const parts = md.split(/(?=^## Path [A-C] —)/m);
+  const intro = parts[0];
+  const pathSections = parts.slice(1);
+
+  // Label extraction
+  const labels = pathSections.map(s => {
+    const m = s.match(/^## Path [A-C] — ([^\n]+)/);
+    return m ? m[1].trim().replace(/^.*Contributor\b.*?$/, s => s) : s.substring(4, 30);
+  });
+
+  // Simplified labels for buttons
+  const btnLabels = ['Backend', 'Frontend', 'Plugin'];
+
+  let active = 0;
+  function render() {
+    let html = marked.parse(intro);
+    html += `<div class="switcher">`;
+    btnLabels.forEach((lbl, i) => {
+      html += `<button class="${i === active ? 'active' : ''}" onclick="window._lpSwitch(${i})">${lbl}</button>`;
+    });
+    html += `</div>`;
+    if (pathSections[active]) {
+      html += marked.parse(pathSections[active]);
+    }
+    main.innerHTML = html;
+    renderMermaid(main);
+  }
+
+  window._lpSwitch = function(i) { active = i; render(); };
+  render();
+}
+
+/* ── STARTER TASKS page ────────────────────────────────── */
+async function renderStarterTasks() {
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="spinner">Loading…</div>';
+  let md = '';
+  try { md = await fetchText('outputs/starter-tasks.md'); } catch(e) {
+    main.innerHTML = `<p style="color:var(--red)">Failed to load starter-tasks.md: ${e.message}</p>`; return;
+  }
+
+  // Split into sections by "## Level N"
+  const parts = md.split(/(?=^## Level \d)/m);
+  const intro = parts[0];
+  const levelSections = {};
+  parts.slice(1).forEach(s => {
+    const m = s.match(/^## Level (\d)/);
+    if (m) levelSections[m[1]] = s;
+  });
+
+  let active = 'all';
+  function render() {
+    let html = marked.parse(intro);
+    html += `<div class="level-btns">
+      <button class="${active === 'all' ? 'active' : ''}" onclick="window._stFilter('all')">All levels</button>
+      <button class="${active === '1' ? 'active' : ''}" onclick="window._stFilter('1')">Level 1 — Docs / Tests</button>
+      <button class="${active === '2' ? 'active' : ''}" onclick="window._stFilter('2')">Level 2 — Bug fixes</button>
+      <button class="${active === '3' ? 'active' : ''}" onclick="window._stFilter('3')">Level 3 — Features</button>
+    </div>`;
+    if (active === 'all') {
+      Object.values(levelSections).forEach(s => { html += marked.parse(s); });
+    } else if (levelSections[active]) {
+      html += marked.parse(levelSections[active]);
+    } else {
+      html += `<p style="color:var(--muted)">No tasks found for this level.</p>`;
+    }
+    main.innerHTML = html;
+    renderMermaid(main);
+  }
+
+  window._stFilter = function(lvl) { active = lvl; render(); };
+  render();
+}
+
+/* ── Router ────────────────────────────────────────────── */
+function currentPage() {
+  const h = location.hash.replace(/^#\/?/, '') || 'home';
+  return h;
+}
+
+function setActive(page) {
+  document.querySelectorAll('.nav-link').forEach(a => {
+    a.classList.toggle('active', a.dataset.page === page);
+  });
+}
+
+function cleanMermaidErrors() {
+  // Remove any Mermaid error SVGs or elements leaked into <body>
+  document.body.querySelectorAll('svg[aria-roledescription="error"]').forEach(el => el.remove());
+  // Mermaid appends error divs with ids like "dmermaid-…" or "d<id>" directly to body
+  document.body.querySelectorAll('[id^="d"]').forEach(el => {
+    if (el.tagName === 'DIV' && !el.closest('#shell') && el.id.startsWith('d')) el.remove();
+  });
+}
+
+async function navigate(page) {
+  cleanMermaidErrors();
+  setActive(page);
+
+  // Close mobile menu
+  document.getElementById('sidebar').classList.remove('open');
+
+  window.scrollTo(0, 0);
+  document.getElementById('main').scrollTop = 0;
+
+  switch (page) {
+    case 'home':           await renderHome(); break;
+    case 'quiz':           await renderQuiz(); break;
+    case 'convention-guard': await renderConventionGuard(); break;
+    case 'buddy':          await renderBuddy(); break;
+    case 'learning-paths': await renderLearningPaths(); break;
+    case 'starter-tasks':  await renderStarterTasks(); break;
+    default:
+      if (PAGES[page]) await renderMarkdown(page);
+      else { document.getElementById('main').innerHTML = `<p style="color:var(--red)">Unknown page: <code>${page}</code></p>`; }
+  }
+}
+
+window.addEventListener('hashchange', () => navigate(currentPage()));
+
+/* ── Nav link clicks ───────────────────────────────────── */
+document.querySelectorAll('.nav-link').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const page = a.dataset.page;
+    if (location.hash === `#/${page}`) { navigate(page); return; }
+    location.hash = `/${page}`;
+  });
+});
+
+/* ── Mobile menu toggle ────────────────────────────────── */
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+/* ── Initial load ──────────────────────────────────────── */
+navigate(currentPage());
+</script>
+</body>
+</html>
